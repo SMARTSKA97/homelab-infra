@@ -1,0 +1,7 @@
+# Ignore all environment files
+.env
+.env.*
+
+# Ignore OS generated files
+.DS_Store
+Thumbs.db
