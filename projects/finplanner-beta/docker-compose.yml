@@ -1,0 +1,31 @@
+services:
+  # 1. The Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: finplanner-beta-redis
+    restart: unless-stopped
+    # We don't expose ports here; the backend will talk to it internally on port 6379
+
+  # 2. The .NET Backend
+  backend:
+    image: registry.gitlab.com/your-gitlab-username/finplanner-backend:devel
+    container_name: finplanner-beta-backend
+    restart: unless-stopped
+    depends_on:
+      - redis
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__NeonDB=${NEON_DB_CONNECTION}
+      - Redis__Configuration=redis:6379
+    ports:
+      - "5050:80" # Maps HP Server port 5050 to internal .NET port
+
+  # 3. The Angular Frontend
+  frontend:
+    image: registry.gitlab.com/your-gitlab-username/finplanner-frontend:devel
+    container_name: finplanner-beta-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5051:80" # Maps HP Server port 5051 to internal Angular/Nginx port
