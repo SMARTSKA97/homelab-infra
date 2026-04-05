@@ -1,0 +1,14 @@
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    # --- THE DNS FIX ---
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+      - 8.8.8.8
+    # -------------------
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
