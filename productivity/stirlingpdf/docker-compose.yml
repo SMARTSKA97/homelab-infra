@@ -6,7 +6,10 @@ services:
       - "8082:8080" # We use 8082 so it doesn't conflict with FileBrowser
     volumes:
       - /mnt/storagepool/media/config/stirling-pdf/customFiles:/customFiles/
+      - /mnt/storagepool/config/stirling-pdf/trainingData:/usr/share/tessdata
+      - /mnt/storagepool/config/stirling-pdf/extraConfigs:/configs
     environment:
       - DOCKER_ENABLE_SECURITY=false
+      - INSTALL_BOOK_AND_ADVANCED_HTML_OPS=false
       - LANGS=en_GB
     restart: unless-stopped
