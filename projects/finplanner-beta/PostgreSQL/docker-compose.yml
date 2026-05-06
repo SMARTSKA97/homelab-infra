@@ -1,0 +1,47 @@
+services:
+  db:
+    image: my-postgres-prod:16
+    command: ["postgres", "-c", "shared_preload_libraries=pg_cron,pg_partman_bgw", "-c", "cron.database_name=jitbilling_30042026"]
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      # Local DB storage
+      - /home/smartska97/docker/postgres:/var/lib/postgresql/data
+
+      # SMB share (READ ONLY)
+      - /mnt/windows_share:/backups:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:9.14
+    container_name: pgadmin4_container
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin@123
+      PGADMIN_CONFIG_ENFORCE_PASSWORD_SETTING: 'True'
+    ports:
+      - "5050:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # pgAdmin config storage
+      - /home/smartska97/docker/pgadmin:/var/lib/pgadmin
+
+      # Optional: also mount SMB (not required for restore, but useful)
+      - /mnt/windows_share:/backups:ro
+
+networks:
+  default:
+    name: postgres_network
