@@ -24,6 +24,7 @@ D:\Workspace\Database
 ├── pgadmin
 ├── backups
 ├── compose
+|   └── docker-compose.yml
 ├── scripts
 └── docker
     └── postgres
