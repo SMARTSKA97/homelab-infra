@@ -105,4 +105,4 @@ WHERE parent_table = 'public.billing_logs';
 ---
 
 > [!TIP]
-> Combine `pg_partman` with **`pg_cron`** to run maintenance tasks at specific off-peak hours if you prefer more control than the default BGW interval provides.
+> Combine `pg_partman` with **`pg_cron`** to run maintenance tasks at specific off-peak hours if you prefer more control than the default BGW interval provides. Thus `pg_partman_bgw` can be avoided for unnecessary overheads.
