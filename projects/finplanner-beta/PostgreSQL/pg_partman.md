@@ -17,7 +17,7 @@ instead of relying on `pg_partman_bgw`.
 > [!IMPORTANT]
 > `pg_cron` is REQUIRED for this setup.
 >
-> This guide intentionally uses `pg_cron` instead of `pg_partman_bgw` because it provides:
+> This guide intentionally uses `pg_cron` instead of `pg_partman` because it provides:
 >
 > * Better observability
 > * Explicit scheduling
@@ -27,7 +27,7 @@ instead of relying on `pg_partman_bgw`.
 
 Before continuing, complete the `pg_cron` setup guide:
 
-🔗 [pg_cron Setup Guide](https://github.com/SMARTSKA97/homelab-infra/blob/main/projects/finplanner-beta/PostgreSQL/pg_cron.md?utm_source=chatgpt.com)
+🔗 [pg_cron Setup Guide](https://github.com/SMARTSKA97/homelab-infra/blob/main/projects/finplanner-beta/PostgreSQL/pg_cron.md)
 
 ---
 
@@ -88,7 +88,7 @@ Configure partition management.
 
 ```sql
 SELECT partman.create_parent(
-    p_parent_table => 'public.billing_logs',
+    p_parent_table => 'public.audit_logs',
     p_control => 'created_at',
     p_type => 'native',
     p_interval => 'daily',
