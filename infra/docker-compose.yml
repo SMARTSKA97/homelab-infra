@@ -46,12 +46,12 @@ services:
     environment:
       - TZ=${TZ}
       - WATCHTOWER_CLEANUP=true
-      - WATCHTOWER_POLL_INTERVAL=${WATCHTOWER_POLL_INTERVAL}
+      - WATCHTOWER_POLL_INTERVAL=300
       - WATCHTOWER_ROLLING_RESTART=false
       # Filters updates only to containers flagged within the infra ecosystem
-      - WATCHTOWER_SCOPE=infra-scope
-    labels:
-      - "com.centurylinklabs.watchtower.scope=infra-scope"
+      # - WATCHTOWER_SCOPE=infra-scope
+      # labels:
+      #   - "com.centurylinklabs.watchtower.scope=infra-scope"
 
 networks:
   shared-backend-tier:
