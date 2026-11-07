@@ -3,7 +3,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
   <img src="https://img.shields.io/badge/Docker_Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Compose" />
-  <img src="https://img.shields.io/badge/Nginx-009639?style=for-the-badge&logo=nginx&logoColor=white" alt="Nginx" />
+  <img src="https://img.shields.io/badge/Nginx_Proxy_Manager-21B099?style=for-the-badge&logo=nginxproxymanager&logoColor=white" alt="Nginx Proxy Manager" />
   <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
   <img src="https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white" alt="Redis" />
   <img src="https://img.shields.io/badge/Cloudflare-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Cloudflare" />
@@ -44,10 +44,10 @@ flowchart TD
     end
 
     subgraph Edge_Tier["🛡️ Core Edge & Gateway (infra/)"]
-        NGINX["Nginx Reverse Proxy<br/>(:80, :443)"]
+        NPM["Nginx Proxy Manager<br/>(:80, :443, :81 Admin UI)"]
         HOMEPAGE["Homepage Dashboard<br/>(:3000)"]
         UPTIME["Uptime Kuma<br/>(:3001)"]
-        WATCHTOWER["Watchtower (Auto-updater)"]
+        WATCHTOWER["Watchtower (Auto-updater: 300s)"]
     end
 
     subgraph Network_Bridge["🔗 Docker Bridge Network: shared-backend-tier"]
@@ -74,15 +74,15 @@ flowchart TD
         FINPLANNER["FinPlanner Beta Stack<br/>(.NET + Angular + Redis)"]
     end
 
-    CF --> NGINX
-    LAN --> NGINX
-    NGINX --> HOMEPAGE
-    NGINX --> UPTIME
-    NGINX --> PAPERLESS
-    NGINX --> STIRLING
-    NGINX --> ITTOOLS
-    NGINX --> VAULT
-    NGINX --> FORGEJO
+    CF --> NPM
+    LAN --> NPM
+    NPM --> HOMEPAGE
+    NPM --> UPTIME
+    NPM --> PAPERLESS
+    NPM --> STIRLING
+    NPM --> ITTOOLS
+    NPM --> VAULT
+    NPM --> FORGEJO
 
     HOMEPAGE -.-> Network_Bridge
     UPTIME -.-> Network_Bridge
@@ -99,8 +99,8 @@ flowchart TD
 
 ```text
 homelab-infra/
-├── infra/                     # Edge routing, monitoring, & dashboard
-│   ├── docker-compose.yml     # Nginx, Homepage, Uptime Kuma, Watchtower
+├── infra/                     # Edge routing (Nginx Proxy Manager), monitoring, & dashboard
+│   ├── docker-compose.yml     # Nginx Proxy Manager, Homepage, Uptime Kuma, Watchtower
 │   ├── .env.example           # Port assignments & timezone settings
 │   └── .env
 ├── data/                      # Core storage engines & message queues
@@ -130,10 +130,10 @@ homelab-infra/
 
 | Tier | Service | Container Name | Host Port | Protocol / Path | Purpose |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Infra** | **Nginx** | `nginx_proxy` | `80`, `443` | HTTP / HTTPS | Reverse proxy & SSL termination |
+| **Infra** | **Nginx Proxy Manager** | `nginx_proxy_manager` | `80`, `443`, `81` | HTTP / HTTPS / Admin UI | Visual reverse proxy manager, Let's Encrypt SSL & edge gateway |
 | **Infra** | **Homepage** | `homepage` | `3000` | Web UI | Application dashboard & service launchpad |
 | **Infra** | **Uptime Kuma** | `uptime_kuma` | `3001` | Web UI | High-availability uptime monitoring |
-| **Infra** | **Watchtower** | `watchtower` | — | Internal Daemon | Auto-updates containers tagged with `infra-scope` |
+| **Infra** | **Watchtower** | `watchtower` | — | Internal Daemon | Auto-updates all containers host-wide (300s polling interval) |
 | **Data** | **PostgreSQL** | `postgres_db` | `5432` | TCP / PG Wire | Primary multi-tenant relational database |
 | **Data** | **Redis** | `redis_cache` | `6379` | TCP / RESP | In-memory key-value cache and worker broker |
 | **Data** | **RabbitMQ (App)** | `rabbitmq_broker` | `5672` | AMQP | Message broker for asynchronous workloads |
@@ -335,19 +335,22 @@ Deploying through [Portainer CE](https://www.portainer.io/) provides a clean vis
 1. **Shared Network Isolation**:
    - Containers share the internal bridge network `shared-backend-tier`.
    - Host ports on backend services (like PostgreSQL `5432` or Redis `6379`) can be bound to `127.0.0.1:${POSTGRES_PORT}:5432` in production to prevent exposure outside the host machine.
-2. **Reverse Proxy & SSL**:
-   - Route external traffic through Nginx or Cloudflare Tunnel (`core-system/cloudflared`).
-   - Terminate SSL with valid certificates (Let's Encrypt / Cloudflare Origin CA).
+2. **Nginx Proxy Manager & SSL Termination**:
+   - Web management dashboard is exposed at `http://<HOST_IP>:81`.
+   - **Default Login**: `admin@example.com` / `changeme` (you will be prompted to configure your admin email and password on initial sign-in).
+   - Easily map hostnames/subdomains (e.g. `paperless.local` or `uptime.yourdomain.com`) directly to internal container hostnames (`paperless_ngx:8000`, `uptime_kuma:3001`) over the `shared-backend-tier` network.
+   - Built-in Let's Encrypt certificate generator and Cloudflare DNS challenge automation.
 3. **Principle of Least Privilege**:
    - File ownership and user permissions for mounted volumes use non-root UID/GID mapping (`PUID=1000`, `PGID=1000`).
-4. **Automated Updates with Watchtower Scope**:
-   - Watchtower is restricted by `WATCHTOWER_SCOPE=infra-scope`.
-   - Containers are only automatically upgraded if they explicitly declare the label:
+4. **Automated Host-Wide Updates with Watchtower**:
+   - Configured with `WATCHTOWER_POLL_INTERVAL=300` (5 minutes) and `WATCHTOWER_CLEANUP=true` to monitor and pull updated container images globally across the host.
+   - **Selective Updates (Optional)**: If you prefer pinning stateful databases or selective updates, re-enable scoped mode in `infra/docker-compose.yml`:
      ```yaml
+     environment:
+       - WATCHTOWER_SCOPE=infra-scope
      labels:
        - "com.centurylinklabs.watchtower.scope=infra-scope"
      ```
-   - This prevents unintended breaking updates to mission-critical stateful databases.
 
 ---
 
