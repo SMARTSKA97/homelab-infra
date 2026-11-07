@@ -1,6 +1,7 @@
 # Ignore all environment files
 .env
 .env.*
+!.env.example
 
 # Ignore OS generated files
 .DS_Store

@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL (Relational Database)
+  postgres:
+    image: postgres:18
+    container_name: postgres_db
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT}:5432" # Exposes port to localhost so host-level tools like flyway-migrate can see it
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql 
+      - ./init-multiple-dbs.sql:/docker-entrypoint-initdb.d/init-multiple-dbs.sql
+    networks:
+      - shared-backend-tier
+
+  # 2. Redis (Cache & Key-Value Store)
+  redis:
+    image: redis:8
+    container_name: redis_cache
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT}:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - shared-backend-tier
+
+  # 3. RabbitMQ (Message Broker)
+  rabbitmq:
+    image: rabbitmq:4-management # Includes the web browser dashboard out of the box
+    container_name: rabbitmq_broker
+    restart: unless-stopped
+    ports:
+      - "${RABBITMQ_APP_PORT}:5672"   # RabbitMQ application communication port
+      - "${RABBITMQ_MGMT_PORT}:15672" # Web Management Console UI port
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - shared-backend-tier
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+
+networks:
+  shared-backend-tier:
+    external: true
