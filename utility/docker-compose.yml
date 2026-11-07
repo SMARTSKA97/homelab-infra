@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    restart: unless-stopped
+    ports:
+      - "${DOZZLE_PORT}:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - shared-backend-tier
+
+  stirling-pdf:
+    image: stirlingtools/stirling-pdf:latest
+    container_name: stirling_pdf
+    restart: unless-stopped
+    ports:
+      - "${STIRLING_PORT}:8080"
+    volumes:
+      - ./stirling/trainingData:/usr/share/tessdata
+      - ./stirling/extraConfigs:/configs
+      - ./stirling/customFiles:/customFiles
+      - ./stirling/logs:/logs
+    networks:
+      - shared-backend-tier
+
+  it-tools:
+    image: corentinth/it-tools:latest
+    container_name: it_tools
+    restart: unless-stopped
+    ports:
+      - "${IT_TOOLS_PORT}:80"
+    networks:
+      - shared-backend-tier
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - WEBUI_PORT=${QBITTORRENT_PORT}
+    ports:
+      - "${QBITTORRENT_PORT}:${QBITTORRENT_PORT}"
+      - "${QBIT_TORRENT_PORT}:${QBIT_TORRENT_PORT}"
+      - "${QBIT_TORRENT_PORT}:${QBIT_TORRENT_PORT}/udp"
+    volumes:
+      - ./qbittorrent/config:/config
+      - ./qbittorrent/downloads:/downloads
+    networks:
+      - shared-backend-tier
+
+  paperless-ngx:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: paperless_ngx
+    restart: unless-stopped
+    ports:
+      - "${PAPERLESS_PORT}:8000"
+    healthcheck:
+      test: [ "CMD", "curl", "-fs", "http://localhost:8000/" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - ./paperless/data:/usr/src/paperless/data
+      - ./paperless/media:/usr/src/paperless/media
+      - ./paperless/export:/usr/src/paperless/export
+      - ./paperless/consume:/usr/src/paperless/consume
+    environment:
+      - USERMAP_UID=${PUID}
+      - USERMAP_GID=${PGID}
+      - TZ=${TZ}
+      - PAPERLESS_URL=http://localhost:${PAPERLESS_PORT}
+      - PAPERLESS_SECRET_KEY=${PAPERLESS_SECRET_KEY}
+      # Structural Database Links targeting your dev-backend stack engines
+      - PAPERLESS_DBENGINE=postgresql
+      - PAPERLESS_DBHOST=${PAPERLESS_DB_HOST}
+      - PAPERLESS_DBPORT=${PAPERLESS_DB_PORT}
+      - PAPERLESS_DBNAME=${PAPERLESS_DB_NAME}
+      - PAPERLESS_DBUSER=${PAPERLESS_DB_USER}
+      - PAPERLESS_DBPASS=${PAPERLESS_DB_PASS}
+      - PAPERLESS_REDIS=${PAPERLESS_REDIS_URL}
+      - PAPERLESS_OCR_LANGUAGE=eng
+    networks:
+      - shared-backend-tier
+
+networks:
+  shared-backend-tier:
+    external: true
