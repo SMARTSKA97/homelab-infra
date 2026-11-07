@@ -9,6 +9,7 @@ services:
       - "${DOZZLE_PORT}:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./dozzle_data:/data
     networks:
       - shared-backend-tier
 
